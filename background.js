@@ -1,32 +1,37 @@
 let ctrlPressed = false;
 let shiftPressed = false;
 let activeTabId = null;
+let currentWindowId = null;
 let openTabs = [];
 let tabPointer = 0;
 
-function loadTabs() {
-    chrome.tabs.query({}, (tabs) => {
-        const activeTab = tabs.find(tab => tab.active);
-        if(activeTab) {
-            openTabs = [activeTab, ...tabs.filter(tab => tab.id !== activeTab.id)]
-                        .map(tab => {
-                            return {
-                                id: tab.id,
-                                title: tab.title,
-                                url: tab.url
-                            }
-                        });
-        }
-        else {
-            openTabs = tabs.map(tab => {
-                return {
-                    id: tab.id,
-                    title: tab.title,
-                    url: tab.url
-                }
-            });
-        }
-        console.log("Tabs loaded", openTabs);
+function loadTabsForCurrentWindow() {
+    // chrome.tabs.query({ currentWindow: true }, (tabs) => {
+    //     const activeTab = tabs.find(tab => tab.active);
+    //     if(activeTab) {
+    //         openTabs = [activeTab, ...tabs.filter(tab => tab.id !== activeTab.id)]
+    //                     .map(tab => {
+    //                         return {
+    //                             id: tab.id,
+    //                             title: tab.title,
+    //                             url: tab.url
+    //                         }
+    //                     });
+    //     }
+    //     else {
+    //         openTabs = tabs.map(tab => {
+    //             return {
+    //                 id: tab.id,
+    //                 title: tab.title,
+    //                 url: tab.url
+    //             }
+    //         });
+    //     }
+    //     console.log("Tabs loaded", openTabs);
+    // });
+
+    chrome.windows.getCurrent({populate: true}, (window) => {
+        currentWindowId = currentWindow.id;
     });
 }
 
@@ -35,22 +40,44 @@ function setActiveTab(tabId) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-    loadTabs();    
+    loadTabsForCurrentWindow();    
     console.log("Extension installed with tabs: ", openTabs);
 });
 
 chrome.runtime.onStartup.addListener(() => {
-    loadTabs();    
+    loadTabsForCurrentWindow();    
     console.log("Browser started with tabs: ", openTabs);
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
-    console.log("Tab created: ", tab);
-    openTabs.unshift({
-        id: tab.id,
-        title: tab.title,
-        url: tab.url
-    })
+    chrome.windows.getCurrent((window) => {
+        if(tab.windowId === window.id) {
+            openTabs.unshift({
+                id: tab.id,
+                title: tab.title,
+                url: tab.url
+            });
+            console.log(`Tab ${tab.id} created in window ${window.id}`);
+        }
+    });
+});
+
+chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
+    chrome.tabs.get(tabId, (tab) => {
+        if(tab.windowId === attachInfo.newWindowId) {
+            openTabs.unshift({
+                id: tab.id,
+                title: tab.title,
+                url: tab.url
+            });
+        }
+    });
+});
+
+chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
+    openTabs = openTabs.filter(tab => tab.id !== tabId);
+    console.log("Tab detached: ", tabId);
+    console.log("Open tabs: ", openTabs);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -60,17 +87,6 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
-    activeTabId = activeInfo.tabId;
-// check if activeTabId is in openTabs and is the first
-    const activeTab = openTabs.find(tab => tab.id === activeTabId);
-    if(activeTab) {
-        const index = openTabs.indexOf(activeTab);
-        if(index !== 0) {
-            openTabs.splice(index, 1);
-            openTabs.unshift(activeTab);
-        }
-    }
-
     console.log("Activated tab: ", activeTabId);
     console.log("Open tabs: ", openTabs);
 });
@@ -96,13 +112,17 @@ chrome.commands.onCommand.addListener((command) => {
     }
 });
 
-chrome.runtime.onMessage.addListener((message) => {
-    if(message.action === "list_tabs") {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if(message.action === "get_tabs") {
         console.log(message)
-        return openTabs;
-    } else if (message.action === "focus_tabs" && message.tabId) {
-        chrome.tabs.update(message.tabId, { active: true });
-    } else if (message.action === "recieved_tabs") {
-        console.log("Recieved tab: ", message);
+        sendResponse(openTabs);
+    } else if (message.action === "set_active_tab") {
+        setActiveTab(message.tabId);
+        sendResponse({ success: true });
+    } else if (message.action === "received_tabs") {
+        console.log("Received tabs: ", message.tabs);
+        sendResponse({ success: true });
     }
+
+    return true;
 });

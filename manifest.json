@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "LRU Tab Switcher",
+    "version": "1.0",
+    "permissions": ["tabs", "activeTab", "scripting"],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "commands": {
+        "most_recent": {
+            "suggested_key": {
+                "default": "Alt+Q"
+            },
+            "description": "Switch to most recently used tab"
+        },
+        "cycle_tabs": {
+            "suggested_key": {
+                "default": "Alt+W"
+            },
+            "description": "Cycle through tabs in the LRU order"
+        }
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icon16.png",
+            "48": "icon48.png",
+            "128": "icon128.png"
+        }
+    }
+}

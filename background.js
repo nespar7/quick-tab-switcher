@@ -1,28 +1,19 @@
-let ctrlPressed = false;
-let shiftPressed = false;
 let activeTabId = null;
 let currentWindowId = null;
-let openTabs = [];
-let tabPointer = 0;
+let windowTabs = {};
+// status can be "clear" or "marked" for detachment
+let windowStatus = {};
 
-function loadWindowTabs() {
-    chrome.windows.getCurrent({populate: true}, (window) => {
-        currentWindowId = window.id;
-        openTabs = window.tabs.map(tab => {
-            return {
-                id: tab.id,
-                title: tab.title,
-                url: tab.url
-            }
-        });
-        let activeTab = window.tabs.find(tab => tab.active);
-        activeIndex = openTabs.findIndex(tab => tab.id === activeTab.id);
-        if(activeIndex !== 0) {
-            openTabs.splice(activeIndex, 1);
-            openTabs.unshift(activeTab);
-            activeTabId = activeTab.id;
+function loadWindowTabs(windowId) {
+    chrome.windows.get(windowId, {populate: true}, (window) => {
+        if(window) {
+            windowTabs[windowId] = window.tabs.map(tab => ({
+                    id: tab.id,
+                    title: tab.title,
+                    url: tab.url
+                }));
+            console.log(`Tabs loaded for window ${window.id}: `, windowTabs[windowId]);
         }
-        console.log(`Tabs loaded for window ${currentWindowId}: `, openTabs);
     });
 }
 
@@ -30,93 +21,141 @@ function setActiveTab(tabId) {
     if(tabId) chrome.tabs.update(tabId, { active: true });
 }
 
+function initialiseAllWindows() {
+    chrome.windows.getAll({populate: true}, (windows) => {
+        windows.forEach(window => {
+            windowTabs[window.id] = window.tabs.map(tab => ({
+                id: tab.id,
+                title: tab.title,
+                url: tab.url
+            }));
+            const activeTab = window.tabs.find(tab => tab.active);
+            if(activeTab) {
+                const index = windowTabs[window.id].findIndex(tab => tab.id === activeTab.id);
+                if(index !== 0) {
+                    windowTabs[window.id].splice(index, 1);
+                    windowTabs[window.id].unshift({
+                        id: activeTab.id,
+                        title: activeTab.title,
+                        url: activeTab.url
+                    });
+                }
+            }
+        });
+    });
+    console.log("Initialised all windows: ", windowTabs);
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-    loadWindowTabs();    
-    console.log("Extension installed with tabs: ", openTabs);
+    initialiseAllWindows();
+    console.log("Browser installed with tabs: ", windowTabs);
 });
 
 chrome.runtime.onStartup.addListener(() => {
-    loadWindowTabs();    
-    console.log("Browser started with tabs: ", openTabs);
+    initialiseAllWindows();
+    console.log("Browser started with tabs: ", windowTabs);
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
-    if(tab.windowId === currentWindowId) {
-        console.log("Tab created: ", tab);
-        openTabs.unshift({
+    if(!windowTabs[tab.windowId]) {
+        if(windowStatus[tab.windowId] && windowStatus[tab.windowId] === "marked") {
+            windowStatus[tab.windowId] = "clear";
+            return;
+        }
+        loadWindowTabs(tab.windowId);
+    } else {
+        windowTabs[tab.windowId].unshift({
             id: tab.id,
             title: tab.title,
             url: tab.url
-        })
+        });
     }
-    console.log("Open tabs: ", openTabs);
+    console.log(`Tab created in window ${tab.windowId}: `, tab);
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
-    openTabs = openTabs.filter(tab => tab.id !== tabId);
-    console.log("Tab removed: ", tabId);
-    console.log("Open tabs: ", openTabs);
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    const { windowId } = removeInfo;
+    if(windowTabs[windowId]) {
+        windowTabs[windowId] = windowTabs[windowId].filter(tab => tab.id !== tabId);
+        console.log(`Tab removed from window ${windowId}: `, tabId);
+    }
 });
 
 chrome.tabs.onActivated.addListener(({tabId, windowId}) => {
-    if(windowId === currentWindowId) {
-        activeTabId = tabId;
-        // check if activeTabId is in openTabs and is the first
-        const activeTab = openTabs.find(tab => tab.id === activeTabId);
+    activeTabId = tabId;
+    if(windowTabs[windowId]) {
+        const activeTab = windowTabs[windowId].find(tab => tab.id === activeTabId);
         if(activeTab) {
-            const index = openTabs.indexOf(activeTab);
+            const index = windowTabs[windowId].indexOf(activeTab);
             if(index !== 0) {
-                openTabs.splice(index, 1);
-                openTabs.unshift(activeTab);
+                windowTabs[windowId].splice(index, 1);
+                windowTabs[windowId].unshift(activeTab);
             }
         }
     }
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if(tab.windowId === currentWindowId) {
-        const tabToUpdate = openTabs.find(tab => tab.id === tabId);
+    const { windowId } = tab;
+    if(windowTabs[windowId]) {
+        const tabToUpdate = windowTabs[windowId].find(tab => tab.id === tabId);
         if(tabToUpdate) {
             tabToUpdate.title = tab.title;
             tabToUpdate.url = tab.url;
+            console.log(`Tab updated in window ${windowId}: `, tabToUpdate);
+        }
+    }
+});
+
+chrome.windows.onRemoved.addListener((windowId) => {
+    delete windowTabs[windowId];
+    console.log(`Window removed: ${windowId}`);
+});
+
+chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
+    const { oldWindowId } = detachInfo;
+    if(windowTabs[oldWindowId]) {
+        windowTabs[oldWindowId] = windowTabs[oldWindowId].filter(tab => tab.id !== tabId);
+        if(windowTabs[oldWindowId].length === 0) {
+            delete windowTabs[oldWindowId];
+            windowStatus[oldWindowId] = "marked";
+        }
+        console.log(`Tab detached from window ${oldWindowId}: `, tabId);
+    }
+});
+
+chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
+    const { newWindowId } = attachInfo;
+
+    chrome.tabs.get(tabId, (tab) => {
+        if(!windowTabs[newWindowId]) {
+            loadWindowTabs(newWindowId);
         } else {
-            openTabs.push({
+            windowTabs[newWindowId].unshift({
                 id: tab.id,
                 title: tab.title,
                 url: tab.url
             });
         }
-        console.log("Tab updated: ", tabToUpdate);
-    }
-});
-
-chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
-    if(detachInfo.oldWindowId === currentWindowId) {
-        openTabs = openTabs.filter(tab => tab.id !== tabId);
-        console.log("Tab detached: ", tabId);
-        console.log("Open tabs: ", openTabs);
-    }
-});
-
-chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
-    if(attachInfo.newWindowId === currentWindowId) {
-        chrome.tabs.get(tabId, (tab) => {
-            openTabs.unshift({
-                id: tab.id,
-                title: tab.title,
-                url: tab.url
-            });
-            console.log("Tab attached: ", tab);
-            console.log("Open tabs: ", openTabs);
-        });
-    }
+        console.log(`Tab attached to window ${newWindowId}: `, tab);
+    });
 });
 
 chrome.commands.onCommand.addListener((command) => {
     console.log("Command received: ", command);
     if(command === "most_recent") {
-        most_recent_tab = openTabs[1];
-        if(most_recent_tab) setActiveTab(most_recent_tab.id);
+        chrome.windows.getCurrent({populate: true}, (window) => {
+            console.log("Current window: ", window);
+
+            const { id } = window;
+            const tabs = windowTabs[id] || [];
+            console.log("Tabs: ", tabs);
+            console.log("Window: ", window);
+            const mostRecentTab = tabs[1];
+            if(mostRecentTab) {
+                setActiveTab(mostRecentTab.id);
+            }
+        });
     } else if(command === "cycle_tabs") {
         chrome.action.openPopup();
     }
@@ -125,14 +164,13 @@ chrome.commands.onCommand.addListener((command) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if(message.action === "get_tabs") {
         console.log(message)
-        sendResponse(openTabs);
+        const tabs = windowTabs[message.windowId] || [];
+        sendResponse(tabs);
     } else if (message.action === "set_active_tab") {
         setActiveTab(message.tabId);
         sendResponse({ success: true });
     } else if (message.action === "close_tab") {
         chrome.tabs.remove(message.tabId, () => {
-            // Remove the tab from the openTabs list
-            openTabs = openTabs.filter(tab => tab.id !== message.tabId);
             console.log(`Tab closed: ${message.tabId}`);
             sendResponse({ success: true });
         });

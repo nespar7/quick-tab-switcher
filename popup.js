@@ -4,14 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeIndex = 0;
     let suppressMouseOver = false;
 
-    chrome.runtime.sendMessage({ action: "get_tabs"}, (response) => {
-        if (chrome.runtime.lastError) {
-            console.error("Error:", chrome.runtime.lastError.message);
-        } else {
-            tabList = response || [];
-            renderTabs();
-        }
-    })
+    chrome.windows.getCurrent({populate: true}, (window) => {
+        chrome.runtime.sendMessage({ action: "get_tabs", windowId: window.id}, (response) => {
+            if(chrome.runtime.lastError) {
+                console.error("Error:", chrome.runtime.lastError.message);
+            } else {
+                tabList = response || [];
+                renderTabs();
+            }
+        });
+    });
 
     function renderTabs() {
         tabListElement.innerHTML = "";
@@ -45,14 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Close button clicked");
                 event.stopPropagation();
                 chrome.runtime.sendMessage({ action: "close_tab", tabId: tab.id }, () => {
-                    chrome.runtime.sendMessage({ action: "get_tabs"}, (response) => {
-                        if(chrome.runtime.lastError) {
-                            console.error("Error:", chrome.runtime.lastError.message);
-                        }
-                        else {
-                            tabList = response || [];
-                            renderTabs();
-                        }
+                    chrome.windows.getCurrent({populate: true}, (window) => {
+                        chrome.runtime.sendMessage({ action: "get_tabs", windowId: window.id}, (response) => {
+                            if(chrome.runtime.lastError) {
+                                console.error("Error:", chrome.runtime.lastError.message);
+                            } else {
+                                tabList = response || [];
+                                renderTabs();
+                            }
+                        });
                     });
                 });
             });

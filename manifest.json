@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "LRU Tab Switcher",
+    "name": "Quick Tab Switch",
     "version": "1.0",
     "permissions": ["tabs", "activeTab", "scripting"],
     "background": {
@@ -17,7 +17,7 @@
             "suggested_key": {
                 "default": "Alt+W"
             },
-            "description": "Cycle through tabs in the LRU order"
+            "description": "Show tabs in the order of usage"
         }
     },
     "action": {

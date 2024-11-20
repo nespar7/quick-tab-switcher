@@ -12,7 +12,6 @@ function loadWindowTabs(windowId) {
                     title: tab.title,
                     url: tab.url
                 }));
-            console.log(`Tabs loaded for window ${window.id}: `, windowTabs[windowId]);
         }
     });
 }
@@ -43,17 +42,14 @@ function initialiseAllWindows() {
             }
         });
     });
-    console.log("Initialised all windows: ", windowTabs);
 }
 
 chrome.runtime.onInstalled.addListener(() => {
     initialiseAllWindows();
-    console.log("Browser installed with tabs: ", windowTabs);
 });
 
 chrome.runtime.onStartup.addListener(() => {
     initialiseAllWindows();
-    console.log("Browser started with tabs: ", windowTabs);
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
@@ -70,14 +66,12 @@ chrome.tabs.onCreated.addListener((tab) => {
             url: tab.url
         });
     }
-    console.log(`Tab created in window ${tab.windowId}: `, tab);
 });
 
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
     const { windowId } = removeInfo;
     if(windowTabs[windowId]) {
         windowTabs[windowId] = windowTabs[windowId].filter(tab => tab.id !== tabId);
-        console.log(`Tab removed from window ${windowId}: `, tabId);
     }
 });
 
@@ -102,14 +96,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         if(tabToUpdate) {
             tabToUpdate.title = tab.title;
             tabToUpdate.url = tab.url;
-            console.log(`Tab updated in window ${windowId}: `, tabToUpdate);
         }
     }
 });
 
 chrome.windows.onRemoved.addListener((windowId) => {
     delete windowTabs[windowId];
-    console.log(`Window removed: ${windowId}`);
 });
 
 chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
@@ -120,7 +112,6 @@ chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
             delete windowTabs[oldWindowId];
             windowStatus[oldWindowId] = "marked";
         }
-        console.log(`Tab detached from window ${oldWindowId}: `, tabId);
     }
 });
 
@@ -137,20 +128,15 @@ chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
                 url: tab.url
             });
         }
-        console.log(`Tab attached to window ${newWindowId}: `, tab);
     });
 });
 
 chrome.commands.onCommand.addListener((command) => {
-    console.log("Command received: ", command);
+
     if(command === "most_recent") {
         chrome.windows.getCurrent({populate: true}, (window) => {
-            console.log("Current window: ", window);
-
             const { id } = window;
             const tabs = windowTabs[id] || [];
-            console.log("Tabs: ", tabs);
-            console.log("Window: ", window);
             const mostRecentTab = tabs[1];
             if(mostRecentTab) {
                 setActiveTab(mostRecentTab.id);
@@ -163,7 +149,6 @@ chrome.commands.onCommand.addListener((command) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if(message.action === "get_tabs") {
-        console.log(message)
         const tabs = windowTabs[message.windowId] || [];
         sendResponse(tabs);
     } else if (message.action === "set_active_tab") {
@@ -171,7 +156,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
     } else if (message.action === "close_tab") {
         chrome.tabs.remove(message.tabId, () => {
-            console.log(`Tab closed: ${message.tabId}`);
             sendResponse({ success: true });
         });
     }

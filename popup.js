@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
             closeButton.textContent = "X";
             closeButton.className = "close-button";
             closeButton.addEventListener('click', (event) => {
-                console.log("Close button clicked");
                 event.stopPropagation();
                 chrome.runtime.sendMessage({ action: "close_tab", tabId: tab.id }, () => {
                     chrome.windows.getCurrent({populate: true}, (window) => {

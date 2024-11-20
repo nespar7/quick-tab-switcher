@@ -17,22 +17,48 @@ document.addEventListener('DOMContentLoaded', () => {
         tabListElement.innerHTML = "";
         tabList.forEach((tab, index) => {
             const li = document.createElement('li');
-            li.textContent = tab.title || tab.url || "Untitled";
+            li.className = "tab-item";
             if(index === activeIndex) li.classList.add('active');
             li.dataset.tabId = tab.id;
 
-            li.addEventListener('mouseover', () => {
+            const contentDiv = document.createElement('div');
+            contentDiv.className = "tab-content";
+            contentDiv.textContent = tab.title || tab.url || "Untitled";
+
+            contentDiv.addEventListener('mouseover', () => {
                 if(!suppressMouseOver) {
                     activeIndex = index;
                     renderTabs();
                 }
             });
 
-            li.addEventListener('mousedown', () => {
+            contentDiv.addEventListener('mousedown', () => {
                 chrome.runtime.sendMessage({ action: "set_active_tab", tabId: tab.id }, () => {
                     window.close();
                 });
             });
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = "X";
+            closeButton.className = "close-button";
+            closeButton.addEventListener('click', (event) => {
+                console.log("Close button clicked");
+                event.stopPropagation();
+                chrome.runtime.sendMessage({ action: "close_tab", tabId: tab.id }, () => {
+                    chrome.runtime.sendMessage({ action: "get_tabs"}, (response) => {
+                        if(chrome.runtime.lastError) {
+                            console.error("Error:", chrome.runtime.lastError.message);
+                        }
+                        else {
+                            tabList = response || [];
+                            renderTabs();
+                        }
+                    });
+                });
+            });
+            
+            li.appendChild(contentDiv);
+            li.appendChild(closeButton);
 
             tabListElement.appendChild(li);   
         });

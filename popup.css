@@ -14,15 +14,36 @@ ul {
     padding: 0;
 }
 
-li {
-    padding: 10px;
+.tab-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    border-bottom: 1px solid #ccc;
     cursor: pointer;
-    border-bottom: 1px solid #ddd;
-    white-space: nowrap;
 }
 
-/* Highlight the active tab */
-li.active {
-    background-color: #0078d7;
-    color: white;
+.tab-item.active {
+    font-weight: bold;
+    color: blue;
+}
+
+.tab-content {
+    flex-grow: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.close-button {
+    background-color: transparent;
+    border: none;
+    color: red;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 5px;
+}
+
+.close-button:hover {
+    color: darkred;
 }

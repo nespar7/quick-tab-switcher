@@ -15,6 +15,13 @@ function loadWindowTabs() {
                 url: tab.url
             }
         });
+        let activeTab = window.tabs.find(tab => tab.active);
+        activeIndex = openTabs.findIndex(tab => tab.id === activeTab.id);
+        if(activeIndex !== 0) {
+            openTabs.splice(activeIndex, 1);
+            openTabs.unshift(activeTab);
+            activeTabId = activeTab.id;
+        }
         console.log(`Tabs loaded for window ${currentWindowId}: `, openTabs);
     });
 }
@@ -122,9 +129,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else if (message.action === "set_active_tab") {
         setActiveTab(message.tabId);
         sendResponse({ success: true });
-    } else if (message.action === "received_tabs") {
-        console.log("Received tabs: ", message.tabs);
-        sendResponse({ success: true });
+    } else if (message.action === "close_tab") {
+        chrome.tabs.remove(message.tabId, () => {
+            // Remove the tab from the openTabs list
+            openTabs = openTabs.filter(tab => tab.id !== message.tabId);
+            console.log(`Tab closed: ${message.tabId}`);
+            sendResponse({ success: true });
+        });
     }
 
     return true;

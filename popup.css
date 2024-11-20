@@ -4,7 +4,8 @@ body {
     margin: 0;
     width: 340px;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: #000; /* Black background */
+    color: #fff; /* White text */
 }
 
 /* Tab list styles */
@@ -18,14 +19,22 @@ ul {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 5px 10px;
-    border-bottom: 1px solid #ccc;
+    padding: 10px 15px;
+    border-bottom: 1px solid #333; /* Darker border for contrast */
     cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab-item:hover {
+    background-color: #222; /* Subtle hover effect for tab */
 }
 
 .tab-item.active {
     font-weight: bold;
-    color: blue;
+    color: #fff; /* Keep text white */
+    border: 2px solid #fff; /* Blue border box for active tab */
+    border-radius: 5px; /* Rounded corners */
+    background-color: #111; /* Slightly lighter background for the active tab */
 }
 
 .tab-content {
@@ -35,15 +44,20 @@ ul {
     text-overflow: ellipsis;
 }
 
+/* Close button styles */
 .close-button {
     background-color: transparent;
     border: none;
-    color: red;
+    color: #fff; /* White close button */
     cursor: pointer;
     font-size: 14px;
-    padding: 2px 5px;
+    padding: 5px 10px;
+    transition: all 0.3s;
 }
 
 .close-button:hover {
-    color: darkred;
+    color: #fff; /* Change text color to bright red */
+    border: 1px solid #fff; /* Add a red border box */
+    border-radius: 3px; /* Rounded corners for hover effect */
+    padding: 4px 9px; /* Adjust padding for consistent size */
 }

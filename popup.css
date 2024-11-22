@@ -1,4 +1,22 @@
 /* General styles */
+#search-bar {
+    width: calc(100% - 20px); /* Match the padding of the tab list */
+    padding: 10px 15px;
+    margin: 10px 10px;
+    box-sizing: border-box;
+    border: 1px solid #333; /* Match tab-item border */
+    border-radius: 5px;
+    background-color: #111; /* Consistent with active tab background */
+    color: #fff; /* White text */
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#search-bar:focus {
+    border-color: #fff; /* Highlight border on focus */
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;

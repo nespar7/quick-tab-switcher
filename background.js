@@ -104,6 +104,15 @@ chrome.windows.onRemoved.addListener((windowId) => {
     delete windowTabs[windowId];
 });
 
+chrome.windows.onFocusChanged.addListener((windowId) => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        // No active window, possibly the user switched to another app
+        return;
+    }
+
+    loadWindowTabs(windowId);
+});
+
 chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
     const { oldWindowId } = detachInfo;
     if(windowTabs[oldWindowId]) {

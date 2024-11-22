@@ -9,9 +9,9 @@ Chrome's tab switching is stupid, I want to go to the last tab I opened, not swi
 5. Select the location of this project
 
 ## Commands
-`Alt + Q`: Takes you to the most recently used tabs
-`Alt + W`: Opens a popup with tabs listen in MRU order
-`Click the extension icon`: Opens the same popup as above
+* `Alt + Q`: Takes you to the most recently used tabs
+* `Alt + W`: Opens a popup with tabs listen in MRU order
+* `Click the extension icon`: Opens the same popup as above
 
 ## Issues
 Keyboard commands work only on brave because chrome refuses to register Alt+Q or Alt+W

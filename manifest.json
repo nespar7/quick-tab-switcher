@@ -9,13 +9,15 @@
     "commands": {
         "most_recent": {
             "suggested_key": {
-                "default": "Alt+Q"
+                "default": "Alt+Q",
+                "mac": "Alt+Q"
             },
             "description": "Switch to most recently used tab"
         },
         "cycle_tabs": {
             "suggested_key": {
-                "default": "Alt+W"
+                "default": "Alt+W",
+                "mac": "Alt+W"
             },
             "description": "Show tabs in the order of usage"
         }

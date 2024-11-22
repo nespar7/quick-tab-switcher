@@ -12,6 +12,18 @@ function loadWindowTabs(windowId) {
                     title: tab.title,
                     url: tab.url
                 }));
+            const activeTab = window.tabs.find(tab => tab.active);
+            if(activeTab) {
+                const index = windowTabs[window.id].findIndex(tab => tab.id === activeTab.id);
+                if(index !== 0) {
+                    windowTabs[window.id].splice(index, 1);
+                    windowTabs[window.id].unshift({
+                        id: activeTab.id,
+                        title: activeTab.title,
+                        url: activeTab.url
+                    });
+                }
+            }
         }
     });
 }
@@ -102,6 +114,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 chrome.windows.onRemoved.addListener((windowId) => {
     delete windowTabs[windowId];
+    delete windowStatus[windowId];
 });
 
 chrome.windows.onFocusChanged.addListener((windowId) => {
@@ -110,7 +123,7 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
         return;
     }
 
-    loadWindowTabs(windowId);
+    if(!windowTabs[windowId]) loadWindowTabs(windowId);
 });
 
 chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
@@ -141,7 +154,6 @@ chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
 });
 
 chrome.commands.onCommand.addListener((command) => {
-
     if(command === "most_recent") {
         chrome.windows.getCurrent({populate: true}, (window) => {
             const { id } = window;
